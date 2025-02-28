@@ -1,7 +1,7 @@
 {
   "name": "api-pro",
   "version": "1.0.0",
-  "description": "",
+  "description": "API Per a l'aplicació del Beer Wrapped",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
@@ -16,5 +16,13 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.12.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polgussi23/BeerWrapped-api.git"
+  },
+  "bugs": {
+    "url": "https://github.com/polgussi23/BeerWrapped-api/issues"
+  },
+  "homepage": "https://github.com/polgussi23/BeerWrapped-api#readme"
 }

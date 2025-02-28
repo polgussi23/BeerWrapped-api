@@ -29,7 +29,7 @@ const login = async (req, res) => {
       // Genera un token JWT
       const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '1h' }); // Expira en 1 hora
 
-      return res.status(200).json({ message: 'Login correcte', token: token });
+      return res.status(200).json({ message: 'Login correcte', token: token, userId: user.id, startDay: user.startDay });
     } else {
       return res.status(401).json({ message: 'Credencials invàlides.' });
     }

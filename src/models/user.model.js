@@ -72,6 +72,16 @@ const UserModel = {
     console.log(`Netejats ${result.affectedRows} refresh tokens expirats de la BD.`);
     return result.affectedRows;
   },
+
+   getStartDay: async (userId) => {
+    const [rows] = await db.query('SELECT startDay FROM Users WHERE id = ?', [userId]);
+    return rows[0] ? rows[0].startDay : null;
+  },
+
+  setStartDay: async (userId, startDay) => {
+    await db.query('UPDATE Users SET startDay = ? WHERE id = ?', [startDay, userId]);
+    return startDay;
+  },
 };
 
 export default UserModel;

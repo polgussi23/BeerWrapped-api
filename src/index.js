@@ -1,6 +1,7 @@
 // src/index.js
 import express from 'express';
 import authRoutes from './routes/auth.routes.js';
+import userRoutes from './routes/user.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3100;
@@ -10,6 +11,7 @@ app.use(express.json());
 
 // Usa les rutes d'autenticació
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 app.get('/', (req, res) => {
   res.send('API està funcionant!');

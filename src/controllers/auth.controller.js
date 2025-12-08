@@ -95,41 +95,48 @@ const register = async (req, res) => {
 };
 
 const refreshToken = async (req, res) => {
-  const authHeader = req.headers['Authorization'];
+  const authHeader = req.headers['authorization'];
   const clientRefreshToken = authHeader && authHeader.split(' ')[1];
 
   if (!clientRefreshToken) {
-    return res.status(401).json({ message: 'No s\'ha proporcionat un refresh token.' });
+    return res.status(401).json({ message: "No s'ha proporcionat un refresh token." });
   }
 
-  try{
+  try {
+    // 1. Verifiquem la signatura criptogràfica (si ha caducat, això petarà i anirà al catch)
     const decoded = jwt.verify(clientRefreshToken, REFRESH_TOKEN_SECRET);
 
+    // 2. Verifiquem si existeix a la Base de Dades (Whitelist)
     const storedToken = await UserModel.findRefreshToken(decoded.id, clientRefreshToken);
-    if(!storedToken) {
-      console.warn(`Attempted refresh with invalid/expired/revoked DB token for user ${decoded.id}`);
-      return res.status(403).json({ message: 'Refresh Token no vàlid.' });
+    
+    if (!storedToken) {
+      // Si el token és vàlid criptogràficament però no està a la BD, 
+      // vol dir que l'usuari va fer logout o el token va ser revocat.
+      return res.status(403).json({ message: 'Refresh Token revocat o no vàlid.' });
     }
 
+    // 3. Generem NOMÉS un nou Access Token
     const newAccessToken = jwt.sign(
       { id: decoded.id, username: decoded.username },
       JWT_SECRET,
-      { expiresIn: '15m' }
+      { expiresIn: '15m' } // 1 minut (o 15m)
     );
-    await UserModel.deleteRefreshToken(decoded.id, clientRefreshToken); // Elimina el refresh token antic
 
-    await UserModel.saveRefreshToken(decoded.id, clientRefreshToken, REFRESH_TOKEN_EXPIRES_IN_DAYS); // Guarda el nou refresh token a la base de dades
-
+    // --- CORRECCIÓ CLAU ---
+    // NO esborrem el refresh token.
+    // NO tornem a guardar el refresh token.
+    // Simplement el deixem viure a la BD fins que caduqui naturalment (365 dies).
+    
     return res.status(200).json({
       accessToken: newAccessToken,
-      refreshToken: clientRefreshToken,
-    })
+      refreshToken: clientRefreshToken, // Retornem el mateix per coherència
+    });
 
-  }catch (error) {
-    console.error('Error durant la renovació del token:', error);
-    return res.status(403).json({ message: 'Refresh Token  invàlid o expirat. Torna a iniciar sessió.' });
+  } catch (error) {
+    console.error('Error durant la renovació del token:', error.message);
+    return res.status(403).json({ message: 'Refresh Token invàlid o expirat.' });
   }
-}
+};
 
 const logout = async (req, res) => {
     const authHeader = req.headers['authorization'];

@@ -22,11 +22,11 @@ const setStartDay = async (req, res) => {
   try {
     const { id } = req.params;
     const { startDay } = req.body;
-
+    
     if (!startDay) {
       return res.status(400).json({ message: 'Cal proporcionar una data' });
     }
-
+    
     const existing = await UserModel.getStartDay(id);
     if (existing) {
       return res.status(400).json({ message: 'Ja existeix un startDay, fes servir PUT' });

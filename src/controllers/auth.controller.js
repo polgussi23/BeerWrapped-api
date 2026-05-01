@@ -37,13 +37,21 @@ const login = async (req, res) => {
       const refreshToken = jwt.sign(tokenPayload, REFRESH_TOKEN_SECRET, { expiresIn: '365d' }); // Expira en 1 any
 
       await UserModel.saveRefreshToken(user.id, refreshToken, REFRESH_TOKEN_EXPIRES_IN_DAYS); // Guarda el refresh token a la base de dades
+      
+      let formattedStartDay = null;
+      if(user.startDay){
+        const startDay = new Date(user.startDay);
+        formattedStartDay = startDay.toLocaleDateString('en-CA', {
+          timeZone: 'Europe/Madrid',
+        });
+      }
 
       return res.status(200).json({ 
         message: 'Login correcte', 
         accessToken: accessToken, 
         refreshToken: refreshToken, 
         userId: user.id, 
-        startDay: user.startDay 
+        startDay: formattedStartDay
 });
     } else {
       return res.status(401).json({ message: 'Credencials invàlides.' });

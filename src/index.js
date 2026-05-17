@@ -2,6 +2,7 @@ import express from 'express';
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 import beersRoutes from './routes/beers.routes.js';
+import groupsRoutes from './routes/groups.routes.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -19,6 +20,7 @@ app.use('/images', express.static(join(__dirname, '..', 'images')));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/beers', beersRoutes);
+app.use('/api/groups', groupsRoutes);
 
 app.get('/', (req, res) => {
   res.send('API està funcionant!');

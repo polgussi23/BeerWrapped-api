@@ -19,9 +19,35 @@ const getAllBeers = async (req, res) => {
   }
 };
 
-// GET /api/beers/:id/custom
-const getCustomUserBeers = async (req, res) => {
-  // TODO
+// GET /api/beers/:id/last-3-days
+const getLast3DaysUserBeers = async (req, res) => {
+  try {
+    const {id} = req.params;
+    const {date} = req.query;
+    const last3DaysUserBeers = await BeersModel.getLast3DaysUserBeers(id, date);
+    
+    return res.status(200).json({userBeers: last3DaysUserBeers});
+  } catch (error) {
+    console.error('Error al obtenir beers:', error);
+    return res.status(500).json({ message: 'Error al obtenir beers de l\'usuari' });
+  }
+};
+
+// POST /api/beers/:id/delete-beer
+const deleteUserBeer = async (req, res) => {
+  try {
+    const {id} = req.params;
+    const {beerId} = req.body;
+    
+    await BeersModel.deleteUserBeer(id, beerId);
+
+    return res.status(200).json({message: 'Beer eliminada correctament'});
+  } catch (error) {
+    console.error('Error al eliminar la birra:', error);
+    return res.status(500).json({ message: 'Error a l\'eliminar la birra de l\'usuari' });
+  }
+  
+  
 };
 
 
@@ -51,7 +77,8 @@ const addBeerToUser = async (req, res) => {
 
 export default {
   getAllBeers,
-  getCustomUserBeers,
+  getLast3DaysUserBeers,
+  deleteUserBeer,
   postCustomUserBeer,
   addBeerToUser,
 };

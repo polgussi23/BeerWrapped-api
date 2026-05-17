@@ -64,10 +64,10 @@ const login = async (req, res) => {
 
 
 const register = async (req, res) => {
-  const { username, password, email } = req.body;
+  const { username, password, email, birthdate } = req.body;
 
-  if (!username || !password || !email) {
-    return res.status(400).json({ message: 'Usuari, contrasenya i email són necessaris.' });
+  if (!username || !password || !email || !birthdate) {
+    return res.status(400).json({ message: 'Usuari, contrasenya, email i data neixament són necessaris.' });
   }
 
   try {
@@ -85,13 +85,13 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
     // Crea el nou usuari a la base de dades
-    const userId = await UserModel.createUser(username, hashedPassword, email);
+    const userId = await UserModel.createUser(username, hashedPassword, email, birthdate);
 
     const tokenPayload = { id: userId, username: username };
 
     // Opcional: Genera un token JWT i retorna'l per fer login automàtic després del registre
     const accessToken = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '15m' });
-    const refreshToken = jwt.sign(tokenPayload, REFRESH_TOKEN_SECRET, { expiresIn: '1y' });
+    const refreshToken = jwt.sign(tokenPayload, REFRESH_TOKEN_SECRET, { expiresIn: '3y' });
 
     await UserModel.saveRefreshToken(userId, refreshToken, REFRESH_TOKEN_EXPIRES_IN_DAYS); // Guarda el refresh token a la base de dades
 

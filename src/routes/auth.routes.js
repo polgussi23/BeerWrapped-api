@@ -9,6 +9,8 @@ router.post('/login', authController.login);
 router.post('/register', authController.register);
 router.post('/refresh-token', authController.refreshToken);
 router.post('/logout', authController.logout);
+router.post('/send-verification', authenticateToken, authController.sendVerification);
+router.post('/verify-code', authenticateToken, authController.verifyCode);
 
 router.get('/profile', authenticateToken, (req, res) => {
     // Aquí podríem retornar la informació del perfil de l'usuari autenticat

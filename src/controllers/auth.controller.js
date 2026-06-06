@@ -3,11 +3,31 @@ import UserModel from '../models/user.model.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import nodemailer from 'nodemailer';
 dotenv.config();
+
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 const SALT_ROUNDS = 10;
+const verificationCodes = new Map();
+const transporter = nodemailer.createTransport({
+  host: 'mail.polgussi.cat',   // o smtp.polgussi.cat — depèn del proveïdor
+  port: 587,                    // 465 (SSL) o 587 (TLS)
+  secure: false,                 // true per 465, false per 587
+  requireTLS: true,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
+  }
+});
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('Error de connexió SMTP:', error);
+  } else {
+    console.log('Servidor llest per enviar correus!');
+  }
+});
 
 const REFRESH_TOKEN_EXPIRES_IN_DAYS = 365; // Per exemple, 365 dies
 
@@ -51,7 +71,10 @@ const login = async (req, res) => {
         accessToken: accessToken, 
         refreshToken: refreshToken, 
         userId: user.id, 
-        startDay: formattedStartDay
+        startDay: formattedStartDay,
+        email: user.email,
+        birthdate: user.birthdate,
+        verified: user.email_validated
 });
     } else {
       return res.status(401).json({ message: 'Credencials invàlides.' });
@@ -95,7 +118,14 @@ const register = async (req, res) => {
 
     await UserModel.saveRefreshToken(userId, refreshToken, REFRESH_TOKEN_EXPIRES_IN_DAYS); // Guarda el refresh token a la base de dades
 
-    return res.status(201).json({ message: 'Usuari registrat correctament', userId: userId, accessToken: accessToken, refreshToken: refreshToken }); // 201 Created
+    return res.status(201).json(
+      { message: 'Usuari registrat correctament',
+        userId: userId,
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        email: email,
+        birthdate: birthdate
+      }); // 201 Created
   } catch (error) {
     console.error('Error durant el registre:', error);
     return res.status(500).json({ message: 'Error en el servidor durant el registre.' });
@@ -169,9 +199,67 @@ const logout = async (req, res) => {
     }
 };
 
+const verifyCode = async (req, res) => {
+  const { email, code } = req.body;
+  const stored = verificationCodes.get(email);
+
+  if (!stored) {
+    return res.status(400).json({ error: 'No hi ha cap codi pendent' });
+  }
+
+  if (Date.now() > stored.expiresAt) {
+    verificationCodes.delete(email);
+    return res.status(400).json({ error: 'El codi ha caducat' });
+  }
+
+  if (stored.code !== code) {
+    return res.status(400).json({ error: 'Codi incorrecte' });
+  }
+
+  verificationCodes.delete(email);
+  UserModel.emailVerified(email);
+  console.log("Status 200. Correu verificat");
+  return res.status(200).json({ message: 'Correu verificat correctament!' });
+}
+
+const sendVerification = async (req, res) => {
+  const { email } = req.body;
+  const code = generateVerificationCode();
+  const expiresAt = Date.now() + 10 * 60 * 1000;
+
+  verificationCodes.set(email, { code, expiresAt });
+
+  try {
+    await sendVerificationEmail(email, code);
+    return res.status(200).json({ message: 'Codi enviat!' });
+  } catch (error) {
+    console.error('Error enviant email:', error); // <-- mira aquest log al servidor
+    return res.status(500).json({ error: error.message });
+  }
+}
+
+async function sendVerificationEmail(email, code) {
+  await transporter.sendMail({
+    from: '"BirraWrapped" <noreply@polgussi.cat>',
+    to: email,
+    subject: 'Verifica el teu correu',
+    html: `
+      <h2>Codi de verificació</h2>
+      <p>El teu codi és: <strong style="font-size: 24px">${code}</strong></p>
+      <p>Caduca en 10 minuts.</p>
+    `
+  });
+}
+
+function generateVerificationCode() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 export default {
   login,
   register,
   refreshToken,
   logout,
+  verifyCode,
+  sendVerification,
 };

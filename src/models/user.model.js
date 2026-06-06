@@ -127,22 +127,44 @@ const UserModel = {
     await db.query('UPDATE users SET profile_image = ? WHERE id = ?', [imagePath, id]);
   },
 
-  getWrappedStatus: async (userId) => {
-    const [rows] = await db.query(
-      'SELECT DATE_FORMAT(startDay, "%Y-%m-%d") as startDay, wrapped_seen_at, wrapped_reset_at, wrapped_season_start FROM users WHERE id = ?',
-      [userId]
+  emailVerified: async(email) => {
+    await db.query(
+      'UPDATE users SET email_validated="YES" where email= ? ',
+      [email]
     );
-    return rows[0] ?? null;
   },
+
+  getWrappedStatus: async (userId) => {
+  const [rows] = await db.query(
+    `SELECT DATE_FORMAT(startDay, "%Y-%m-%d") as startDay, 
+     wrapped_seen_at, 
+     DATE_FORMAT(wrapped_season_start, "%Y-%m-%d") as wrapped_season_start,
+     wrapped_status 
+     FROM users WHERE id = ?`,
+    [userId]
+  );
+  return rows[0] ?? null;
+},
 
   setWrappedSeenAt: async (userId) => {
     await db.query('UPDATE users SET wrapped_seen_at = NOW() WHERE id = ?', [userId]);
   },
 
-  setWrappedResetAt: async (userId, seasonStart) => {
+  setWrappedStatus: async (userId, status) => {
+    await db.query('UPDATE users SET wrapped_status = ? WHERE id = ?', [status, userId]);
+  },
+
+  setWrappedSeenAt: async (userId) => {
     await db.query(
-      'UPDATE users SET wrapped_reset_at = NOW(), wrapped_season_start = ? WHERE id = ?',
-      [seasonStart, userId]
+      'UPDATE users SET wrapped_seen_at = NOW(), wrapped_status = ? WHERE id = ?',
+      ['banner', userId]
+    );
+  },
+
+  setWrappedSeasonStart: async (userId, seasonStart) => {
+    await db.query(
+      'UPDATE users SET wrapped_season_start = ?, wrapped_status = ? WHERE id = ?',
+      [seasonStart, 'popup', userId]
     );
   },
 

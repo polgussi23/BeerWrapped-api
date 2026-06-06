@@ -165,6 +165,51 @@ const GroupsModel = {
     );
   },
 
+  removeGroup: async (groupId) => {
+    await db.query(
+        `DELETE FROM meetup_attendees
+         WHERE meetup_id IN (
+             SELECT id FROM meetups
+             WHERE group_id = ?
+         )`,
+        [groupId]
+    );
+    
+    await db.query(
+        'DELETE FROM meetups WHERE group_id = ?',
+        [groupId]
+    );
+
+    await db.query(
+      'DELETE FROM groups WHERE id = ?',
+      [groupId]
+    );
+  },
+
+  chooseNowOwner: async (groupId) => {
+    // Es posarà el primer admin que es va unir al grup
+    const [rows] = await db.query(
+      'SELECT id, user_id, role '+
+      'FROM group_members ' +
+      'WHERE group_id = ? '+
+      'ORDER BY ' +
+          'CASE '+
+              'WHEN role = "admin" THEN 0 '+
+              'WHEN role = "user" THEN 1 '+
+          'END, '+
+          'joined_at',
+      [groupId]
+    );
+    await db.query(
+      'UPDATE group_members SET role="owner" WHERE id= ? ',
+      [rows[0].id]
+    );
+    await db.query(
+      'UPDATE groups SET owner_id= ? WHERE id= ? ',
+      [rows[0].user_id, groupId]
+    );
+  },
+
   updateMemberRole: async (groupId, userId, role) => {
     await db.query(
       'UPDATE group_members SET role = ? WHERE group_id = ? AND user_id = ?',

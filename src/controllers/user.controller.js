@@ -55,22 +55,6 @@ const updateStartDay = async (req, res) => {
       return res.status(400).json({ message: 'Cal proporcionar una nova data' });
     }
 
-    // Comprovem si el Wrapped havia tocat abans de canviar la data
-    const currentData = await UserModel.getWrappedStatus(id);
-    if (currentData?.startDay) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const wrappedDate = new Date(currentData.startDay);
-      wrappedDate.setFullYear(wrappedDate.getFullYear() + 1);
-      wrappedDate.setHours(0, 0, 0, 0);
-      
-      if (today >= wrappedDate) {
-        //await UserModel.setWrappedResetAt(id);
-        await UserModel.setWrappedResetAt(id, currentData.startDay);
-      }
-    }
-
     const savedDay = await UserModel.setStartDay(id, startDay);
     return res.status(200).json({ message: 'startDay actualitzat', startDay: savedDay });
 
@@ -245,38 +229,35 @@ const getWrappedStatus = async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const wrappedDate = new Date(data.startDay);
-    wrappedDate.setFullYear(wrappedDate.getFullYear() + 1);
-    wrappedDate.setHours(0, 0, 0, 0);
-
-    // Primer comprovem si cal mostrar el banner (independentment del reset)
-    // perquè els 7 dies del banner han de respectar-se sempre
-    if (data.wrapped_seen_at) {
+    // Si el banner ja ha caducat, posem wrapped_status a 'none'
+    if (data.wrapped_status === 'banner') {
       const seenAt = new Date(data.wrapped_seen_at);
       seenAt.setHours(0, 0, 0, 0);
       const daysSinceSeen = Math.floor((today - seenAt) / (1000 * 60 * 60 * 24));
 
-      if (daysSinceSeen <= 7) {
-        return res.status(200).json({ show: true, type: 'banner' });
-      }
-    }
-
-    // Encara no toca el Wrapped
-    if (today < wrappedDate) {
-      return res.status(200).json({ show: false });
-    }
-
-    // L'usuari ha fet reset després que toqués el Wrapped
-    if (data.wrapped_reset_at) {
-      const resetAt = new Date(data.wrapped_reset_at);
-      resetAt.setHours(0, 0, 0, 0);
-      if (resetAt >= wrappedDate) {
+      if (daysSinceSeen > 7) {
+        await UserModel.setWrappedStatus(id, 'none');
         return res.status(200).json({ show: false });
       }
+
+      return res.status(200).json({ show: true, type: 'banner' });
     }
 
-    // Toca el Wrapped i no l'ha vist encara — mostra el pop-up
-    return res.status(200).json({ show: true, type: 'popup' });
+    if (data.wrapped_status === 'popup') {
+      return res.status(200).json({ show: true, type: 'popup' });
+    }
+
+    // wrapped_status === 'none' — comprovem si toca el Wrapped
+    const wrappedDate = new Date(data.startDay);
+    wrappedDate.setFullYear(wrappedDate.getFullYear() + 1);
+    wrappedDate.setHours(0, 0, 0, 0);
+
+    if (today >= wrappedDate) {
+      await UserModel.setWrappedSeasonStart(id, data.startDay);
+      return res.status(200).json({ show: true, type: 'popup' });
+    }
+
+    return res.status(200).json({ show: false });
 
   } catch (error) {
     console.error('Error al obtenir wrapped status:', error);
@@ -289,7 +270,7 @@ const updateWrappedSeen = async (req, res) => {
   try {
     const { id } = req.params;
     await UserModel.setWrappedSeenAt(id);
-    return res.status(200).json({ message: 'wrapped_seen_at actualitzat correctament' });
+    return res.status(200).json({ message: 'Wrapped marcat com a vist correctament' });
   } catch (error) {
     console.error('Error al actualitzar wrapped_seen_at:', error);
     return res.status(500).json({ message: 'Error al actualitzar wrapped_seen_at' });
@@ -299,36 +280,18 @@ const updateWrappedSeen = async (req, res) => {
 const getWrappedData = async (req, res) => {
   try {
     const { id } = req.params;
-    const { today } = req.query;
-
-    if (!today) {
-      return res.status(400).json({ message: 'Cal proporcionar la data actual' });
-    }
-
     const user = await UserModel.getWrappedStatus(id);
 
-    if (!user?.startDay) {
+    if (!user?.wrapped_season_start) {
       return res.status(400).json({ message: 'No hi ha dades del Wrapped' });
     }
 
-    const todayDate = new Date(today);
-    todayDate.setHours(0, 0, 0, 0);
-
-    const startDayDate = new Date(user.startDay);
-    startDayDate.setHours(0, 0, 0, 0);
-
-    const startDate = startDayDate < todayDate ? user.startDay : user.wrapped_season_start;
-
-    if (!startDate) {
-      return res.status(400).json({ message: 'No hi ha dades del Wrapped' });
-    }
-
-    const endDate = new Date(startDate);
+    const endDate = new Date(user.wrapped_season_start);
     endDate.setFullYear(endDate.getFullYear() + 1);
     endDate.setDate(endDate.getDate() - 1);
     const endDateStr = endDate.toISOString().split('T')[0];
 
-    const data = await UserModel.getWrappedData(id, startDate, endDateStr);
+    const data = await UserModel.getWrappedData(id, user.wrapped_season_start, endDateStr);
     return res.status(200).json({ wrapped: data });
 
   } catch (error) {

@@ -172,17 +172,30 @@ const removeMember = async (req, res) => {
   try {
     const { groupId, userId } = req.params;
     const requesterId = req.user.id;
+    const isSelf = parseInt(userId) === parseInt(requesterId);
 
     // Comprovem que el que fa la petició és admin o owner
     const requesterRole = await GroupsModel.getUserRole(groupId, requesterId);
+
+    if(isSelf){
+      await GroupsModel.removeMember(groupId, userId);
+      
+      const numMembers = (await GroupsModel.getMembersOfGroup(groupId)).length;
+      if(numMembers==0) await GroupsModel.removeGroup(groupId);
+      else if(requesterRole=='owner') {
+        await GroupsModel.chooseNowOwner(groupId);
+      }
+      return res.status(200).json({ message: 'Membre eliminat correctament' });
+    }
+
     if (!['admin', 'owner'].includes(requesterRole)) {
-      return res.status(403).json({ message: 'No tens permisos per eliminar membres' });
+      return res.status(402).json({ message: 'No tens permisos per eliminar membres' });
     }
 
     // No es pot eliminar l'owner
     const targetRole = await GroupsModel.getUserRole(groupId, userId);
     if (targetRole === 'owner') {
-      return res.status(403).json({ message: 'No es pot eliminar el propietari del grup' });
+      return res.status(402).json({ message: 'No es pot eliminar el propietari del grup' });
     }
 
     await GroupsModel.removeMember(groupId, userId);

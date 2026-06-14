@@ -59,11 +59,12 @@ const login = async (req, res) => {
       await UserModel.saveRefreshToken(user.id, refreshToken, REFRESH_TOKEN_EXPIRES_IN_DAYS); // Guarda el refresh token a la base de dades
       
       let formattedStartDay = null;
-      if(user.startDay){
-        const startDay = new Date(user.startDay);
-        formattedStartDay = startDay.toLocaleDateString('en-CA', {
-          timeZone: 'Europe/Madrid',
-        });
+      if (user.startDay) {
+        const d = new Date(user.startDay);
+        const year = d.getUTCFullYear();
+        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        formattedStartDay = `${year}-${month}-${day}`;
       }
 
       return res.status(200).json({ 
@@ -88,6 +89,7 @@ const login = async (req, res) => {
 
 const register = async (req, res) => {
   const { username, password, email, birthdate } = req.body;
+  console.log("Sol·licitud de registre");
 
   if (!username || !password || !email || !birthdate) {
     return res.status(400).json({ message: 'Usuari, contrasenya, email i data neixament són necessaris.' });
@@ -97,10 +99,12 @@ const register = async (req, res) => {
     // Verifica si ja existeix un usuari amb aquest username o email
     const existingUserUsername = await UserModel.findByUsername(username);
     if (existingUserUsername) {
+      console.log("Nom d'usuari ja existeix");
       return res.status(409).json({ message: 'Nom d\'usuari ja existeix.' }); // 409 Conflict
     }
     const existingUserEmail = await UserModel.findByEmail(email);
     if (existingUserEmail) {
+      console.log("Correu ja existeix");
       return res.status(409).json({ message: 'Email ja registrat.' }); // 409 Conflict
     }
 
@@ -255,6 +259,74 @@ function generateVerificationCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+const sendResetCode = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: 'El correu és necessari.' });
+  }
+
+  // Comprovem que l'usuari existeix
+  const user = await UserModel.findByEmail(email);
+  if (!user) {
+    // Per seguretat, no confirmem si el correu existeix o no
+    return res.status(200).json({ message: 'Si el correu existeix, rebràs un codi.' });
+  }
+
+  const code = generateVerificationCode();
+  const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minuts
+  verificationCodes.set(`reset_${email}`, { code, expiresAt });
+
+  try {
+    await sendResetEmail(email, code);
+    return res.status(200).json({ message: 'Codi enviat!' });
+  } catch (error) {
+    console.error('Error enviant email de reset:', error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  const { email, code, newPassword } = req.body;
+
+  if (!email || !code || !newPassword) {
+    return res.status(400).json({ error: 'Falten camps obligatoris.' });
+  }
+
+  const stored = verificationCodes.get(`reset_${email}`);
+
+  if (!stored) {
+    return res.status(400).json({ error: 'No hi ha cap codi pendent.' });
+  }
+  if (Date.now() > stored.expiresAt) {
+    verificationCodes.delete(`reset_${email}`);
+    return res.status(400).json({ error: 'El codi ha caducat.' });
+  }
+  if (stored.code !== code) {
+    return res.status(400).json({ error: 'Codi incorrecte.' });
+  }
+
+  verificationCodes.delete(`reset_${email}`);
+
+  const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  await UserModel.updatePasswordByEmail(email, hashedPassword);
+
+  return res.status(200).json({ message: 'Contrasenya canviada correctament!' });
+};
+
+async function sendResetEmail(email, code) {
+  await transporter.sendMail({
+    from: '"BirraWrapped" <noreply@polgussi.cat>',
+    to: email,
+    subject: 'Recuperació de contrasenya',
+    html: `
+      <h2>Recuperació de contrasenya</h2>
+      <p>El teu codi és: <strong style="font-size: 24px">${code}</strong></p>
+      <p>Caduca en 10 minuts.</p>
+    `
+  });
+}
+
 export default {
   login,
   register,
@@ -262,4 +334,6 @@ export default {
   logout,
   verifyCode,
   sendVerification,
+  sendResetCode,
+  resetPassword,
 };

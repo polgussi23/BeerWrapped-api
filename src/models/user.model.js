@@ -3,16 +3,16 @@ import db from '../config/db.config.js';
 
 const UserModel = {
   findByUsername: async (username) => {
-    const [rows] = await db.query('SELECT * FROM Users WHERE BINARY username = ?', [username]);
+    const [rows] = await db.query('SELECT * FROM users WHERE BINARY username = ?', [username]);
     return rows[0];
   },
   findByEmail: async (email) => {
-    const [rows] = await db.query('SELECT * FROM Users WHERE BINARY email = ?', [email]);
+    const [rows] = await db.query('SELECT * FROM users WHERE BINARY email = ?', [email]);
     return rows[0];
   },
   createUser: async (username, password, email, birthdate) => {
     const [result] = await db.query(
-      'INSERT INTO Users (username, password, email, birthdate) VALUES (?, ?, ?, ?)',
+      'INSERT INTO users (username, password, email, birthdate) VALUES (?, ?, ?, ?)',
       [username, password, email, birthdate]
     );
     return result.insertId; // Retorna l'ID de l'usuari inserit
@@ -73,13 +73,16 @@ const UserModel = {
     return result.affectedRows;
   },
 
-   getStartDay: async (userId) => {
-    const [rows] = await db.query('SELECT startDay FROM Users WHERE id = ?', [userId]);
+  getStartDay: async (userId) => {
+    const [rows] = await db.query(
+      'SELECT DATE_FORMAT(startDay, "%Y-%m-%d") as startDay FROM users WHERE id = ?',
+      [userId]
+    );
     return rows[0] ? rows[0].startDay : null;
   },
 
   setStartDay: async (userId, startDay) => {
-    await db.query('UPDATE Users SET startDay = ? WHERE id = ?', [startDay, userId]);
+    await db.query('UPDATE users SET startDay = ? WHERE id = ?', [startDay, userId]);
     return startDay;
   },
 
@@ -134,17 +137,24 @@ const UserModel = {
     );
   },
 
+  updatePasswordByEmail: async(email, hashedPassword) => {
+    await db.query(
+      'UPDATE users SET password = ? WHERE email = ?',
+      [hashedPassword, email]
+    );
+  },
+
   getWrappedStatus: async (userId) => {
-  const [rows] = await db.query(
-    `SELECT DATE_FORMAT(startDay, "%Y-%m-%d") as startDay, 
-     wrapped_seen_at, 
-     DATE_FORMAT(wrapped_season_start, "%Y-%m-%d") as wrapped_season_start,
-     wrapped_status 
-     FROM users WHERE id = ?`,
-    [userId]
-  );
-  return rows[0] ?? null;
-},
+    const [rows] = await db.query(
+      `SELECT DATE_FORMAT(startDay, "%Y-%m-%d") as startDay, 
+      wrapped_seen_at, 
+      DATE_FORMAT(wrapped_season_start, "%Y-%m-%d") as wrapped_season_start,
+      wrapped_status 
+      FROM users WHERE id = ?`,
+      [userId]
+    );
+    return rows[0] ?? null;
+  },
 
   setWrappedSeenAt: async (userId) => {
     await db.query('UPDATE users SET wrapped_seen_at = NOW() WHERE id = ?', [userId]);

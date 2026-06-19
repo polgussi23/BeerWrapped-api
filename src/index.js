@@ -1,15 +1,30 @@
-// src/index.js
 import express from 'express';
 import authRoutes from './routes/auth.routes.js';
+import userRoutes from './routes/user.routes.js';
+import beersRoutes from './routes/beers.routes.js';
+import groupsRoutes from './routes/groups.routes.js';
+import webRoutes from './routes/web.routes.js';
+import versionRoutes from './routes/version.routes.js';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3100;
 
-// Middleware per parsejar el body de les peticions en format JSON
 app.use(express.json());
 
-// Usa les rutes d'autenticació
+// Path absolut a la carpeta images (un nivell per sobre de src/)
+app.use('/images', express.static(join(__dirname, '..', 'images')));
+
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/beers', beersRoutes);
+app.use('/api/groups', groupsRoutes);
+app.use('/api/check-version', versionRoutes);
+app.use('/join', webRoutes)
 
 app.get('/', (req, res) => {
   res.send('API està funcionant!');

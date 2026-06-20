@@ -445,6 +445,26 @@ const UserModel = {
         name: bestGroup.name,
         count: bestGroup.count,
       } : null,
+
+      // 👇 NOU: faltava sencer
+      records: {
+        earliestBeer: earliestBeer?.time ?? null,
+        latestBeer: latestBeer?.time ?? null,
+        peakDay: peakDay ? { date: peakDay.date, count: peakDay.count } : null,
+        bestWeek: bestWeek ? { weekStart: bestWeek.weekStart, count: bestWeek.count } : null,
+      },
+
+      // 👇 NOU: faltava sencer
+      evolution: {
+        firstHalf: firstHalf.count,
+        secondHalf: secondHalf.count,
+        trend: firstHalf.count > secondHalf.count ? 'down' : 'up',
+        beersBySeason,
+        bestSeason: beersBySeason.length > 0 ? beersBySeason[0] : null,
+      },
+
+      // 👇 NOU: faltava sencer
+      highlights,
     };
   },
 };

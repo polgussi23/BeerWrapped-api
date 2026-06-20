@@ -283,7 +283,7 @@ const UserModel = {
           WHEN TIME(time) >= '12:00:00' AND TIME(time) < '15:00:00' THEN 'Migdia'
           WHEN TIME(time) >= '15:00:00' AND TIME(time) < '20:00:00' THEN 'Tarda'
           WHEN TIME(time) >= '20:00:00' AND TIME(time) < '22:00:00' THEN 'Vespre'
-          WHEN TIME(time) >= '22:00:00' AND TIME(time) > '01:00:00' THEN 'Nit'
+          WHEN TIME(time) >= '22:00:00' OR TIME(time) < '01:00:00' THEN 'Nit'
           ELSE 'Matinada'
         END as moment,
         COUNT(*) as count

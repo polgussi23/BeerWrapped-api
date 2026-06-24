@@ -129,7 +129,7 @@ const GroupsModel = {
       'JOIN users as u ON ub.user_id = u.id ' +
       'JOIN beers as b ON ub.beer_id = b.id ' +
       'JOIN group_members as gm ON u.id = gm.user_id ' +
-      'WHERE gm.group_id = ? AND ub.date >= ?' +
+      'WHERE gm.group_id = ? AND ub.date >= ? AND gm.privacy="public"' +
       'ORDER BY ub.date DESC, ub.time DESC',
       [groupId, date]
     );
@@ -147,9 +147,51 @@ const GroupsModel = {
     return rows;
   },
 
+  getGroupUserInfo: async (groupId, userId) => {
+    const [rows] = await db.query(
+      'SELECT role, privacy, last_privacy_change ' +
+      'FROM group_members ' +
+      'WHERE group_id = ? AND user_id = ?',
+      [groupId, userId]
+    );
+    const row = rows[0];
+    if(!row) return null;
+
+    const {role, privacy, last_privacy_change } = row;
+    let canChangeToPrivate = true;
+    if(privacy === "public" && last_privacy_change){
+      const hoursSinceChange = (Date.now() - new Date(last_privacy_change).getTime()) / (1000*60*60);
+      canChangeToPrivate = hoursSinceChange >=24;
+    }
+    return {role, privacy, canChangeToPrivate};
+  },
+
+  updateGroupUserPrivacy: async (groupId, userId, privacy) => {
+    let canChangeToPrivate = true;
+    if(privacy === "private"){
+      const [rows] = await db.query(
+        'SELECT last_privacy_change FROM group_members ' +
+        'WHERE group_id = ? AND user_id = ?',
+        [groupId, userId]
+      );
+      const last_privacy_change = rows[0].last_privacy_change;
+      const hoursSinceChange = (Date.now() - new Date(last_privacy_change).getTime()) / (1000*60*60);
+      canChangeToPrivate = hoursSinceChange >=24;
+    }
+
+    if(canChangeToPrivate){
+      await db.query(
+        'UPDATE group_members ' +
+        'SET privacy = ?, last_privacy_change = NOW() ' +
+        'WHERE group_id = ? AND user_id = ?',
+        [privacy, groupId, userId]
+      );
+    }else throw new Error("No han passat 24 hores des de l'últim canvi de privacitat a 'private'");
+  },
+
   getMembersOfGroup: async (groupId) => {
     const [rows] = await db.query(
-      'SELECT u.id, u.username, u.profile_image, gm.role ' +
+      'SELECT u.id, u.username, u.profile_image, gm.role, gm.privacy ' +
       'FROM users as u ' +
       'JOIN group_members as gm ON u.id = gm.user_id ' +
       'WHERE gm.group_id = ?',

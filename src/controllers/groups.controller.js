@@ -43,6 +43,29 @@ const joinGroup = async (req, res) => {
   }
 };
 
+const getGroupUserInfo = async (req, res) => {
+  try {
+    const { groupId, id} = req.params;
+    const userInfo = await GroupsModel.getGroupUserInfo(groupId, id);
+    return res.status(200).json({userInfo});
+  } catch (error) {
+    console.error("Error al obtenir info de l'usuari en el grup:", error);
+    return res.status(500).json({ message: "Error al obtenir info de l'usuari en el grup" });
+  }
+}
+
+const updateGroupUserPrivacy = async (req, res) => {
+  try {
+    const { groupId, id} = req.params;
+    const { privacy } = req.body;
+    await GroupsModel.updateGroupUserPrivacy(groupId, id, privacy);
+    return res.status(200).json({ message: 'Privactitat actualitzada correctament' });
+  } catch (error) {
+    console.error("Error a l'actualitzar la privacitat de l'usuari: ", error);
+    return res.status(500).json({ message: "Error a l'actualitzar la privacitat de l'usuari" });
+  }
+}
+
 // GET /api/groups/:id
 const getAllUserGroups = async (req, res) => {
   try {
@@ -240,6 +263,8 @@ export default {
   createGroup,
   joinGroup,
   getAllUserGroups,
+  getGroupUserInfo,
+  updateGroupUserPrivacy,
   getGroupBeersHistory,
   getMeetupAttendees,
   createMeetup,

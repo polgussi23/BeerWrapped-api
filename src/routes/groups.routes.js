@@ -9,6 +9,8 @@ router.post('', authenticateToken, groupsController.createGroup);
 router.post('/:id/join', authenticateToken, authorizeSelf, groupsController.joinGroup);
 router.get('/:id', authenticateToken, authorizeSelf, groupsController.getAllUserGroups);
 
+router.get('/:groupId/info/:id', authenticateToken, authorizeSelf, groupsController.getGroupUserInfo);
+router.put('/:groupId/privacy/:id', authenticateToken, authorizeSelf, groupsController.updateGroupUserPrivacy);
 router.get('/:groupId/members', authenticateToken, groupsController.getMembersOfGroup);
 router.delete('/:groupId/members/:userId', authenticateToken, groupsController.removeMember);
 router.put('/:groupId/members/:userId/role', authenticateToken, groupsController.updateMemberRole);

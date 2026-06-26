@@ -61,10 +61,7 @@ const login = async (req, res) => {
       let formattedStartDay = null;
       if (user.startDay) {
         const d = new Date(user.startDay);
-        const year = d.getUTCFullYear();
-        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-        const day = String(d.getUTCDate()).padStart(2, '0');
-        formattedStartDay = `${year}-${month}-${day}`;
+        formattedStartDay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       }
 
       return res.status(200).json({ 

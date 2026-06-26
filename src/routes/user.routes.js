@@ -14,6 +14,7 @@ router.put('/:id/username', authenticateToken, authorizeSelf, userController.upd
 router.put('/:id/email', authenticateToken, authorizeSelf, userController.updateEmail);
 router.put('/:id/password', authenticateToken, authorizeSelf, userController.updatePassword);
 router.put('/:id/photo', authenticateToken, authorizeSelf, userController.updateProfileImage);
+router.post('/:id/idea', authenticateToken, authorizeSelf, userController.sendNewIdea);
 
 router.get('/:id/wrapped', authenticateToken, authorizeSelf, userController.getWrappedData);
 router.put('/:id/wrapped-seen', authenticateToken, authorizeSelf, userController.updateWrappedSeen);

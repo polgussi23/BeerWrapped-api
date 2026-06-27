@@ -31,7 +31,16 @@ const BeersModel = {
             [userId, beerId]
         );
         return;
-    }
+    },
+
+    updateBeerDateTime: async(userBeerId, date, time, dayOfWeek) => {
+        await db.query(
+            'UPDATE users_beers ' +
+            'SET date=?, time=?, day_of_week=? ' +
+            'WHERE id=?',
+            [date, time,dayOfWeek, userBeerId]
+        );
+    },
 };
 
 export default BeersModel;

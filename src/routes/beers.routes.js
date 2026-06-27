@@ -9,6 +9,7 @@ router.get('/:id/last-3-days', authenticateToken, authorizeSelf, beersController
 router.post('/:id/delete-beer', authenticateToken, authorizeSelf, beersController.deleteUserBeer)
 //router.post('/:id/custom', authenticateToken, authorizeSelf, beersController.postCustomUserBeer);
 router.post('/:id/add-beer', authenticateToken, authorizeSelf, beersController.addBeerToUser);
+router.put('/:id/update-datetime/:userBeerId', authenticateToken, authorizeSelf, beersController.updateBeerDateTime);
 
 
 export default router;

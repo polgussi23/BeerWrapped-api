@@ -74,6 +74,19 @@ const addBeerToUser = async (req, res) => {
   }
 };
 
+const updateBeerDateTime = async (req, res) => {
+  try {
+    const {id, userBeerId} = req.params;
+    const {date, time, dayOfWeek} = req.body;
+    
+    await BeersModel.updateBeerDateTime(userBeerId, date, time, dayOfWeek);
+    return res.status(200).json({message: 'Beer actualitzadda correctament'});
+  } catch (error) {
+    console.error('Error al actualitzar beer:', error);
+    return res.status(500).json({ message: 'Error al actualitzar beer' });
+  }
+}
+
 
 export default {
   getAllBeers,
@@ -81,4 +94,5 @@ export default {
   deleteUserBeer,
   postCustomUserBeer,
   addBeerToUser,
+  updateBeerDateTime,
 };

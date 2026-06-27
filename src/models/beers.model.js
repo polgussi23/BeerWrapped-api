@@ -38,7 +38,7 @@ const BeersModel = {
             'UPDATE users_beers ' +
             'SET date=?, time=?, day_of_week=? ' +
             'WHERE id=?',
-            [date, time,dayOfWeek, beerId]
+            [date, time,dayOfWeek, userBeerId]
         );
     },
 };

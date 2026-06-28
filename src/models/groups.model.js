@@ -69,6 +69,16 @@ const GroupsModel = {
     return rows;
   },
 
+  getGroupNameById: async (groupId) => {
+    const [rows] = await db.query(
+      `SELECT name
+      FROM groups
+      WHERE id=?`,
+      [groupId]
+    );
+    return rows[0];
+  },
+
   getGroupBeersHistory: async (groupId, date) => {
     const [rows] = await db.query(
       'SELECT u.username, b.name, DATE_FORMAT(ub.date, "%Y-%m-%d") as date, ub.time, ub.day_of_week ' +

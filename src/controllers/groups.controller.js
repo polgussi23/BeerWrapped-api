@@ -1,5 +1,7 @@
 // src/controllers/groups.controller.js
 import GroupsModel from '../models/groups.model.js';
+import UserModel from '../models/user.model.js';
+import NotificationService from '../services/notification.service.js';
 
 // POST /api/groups
 const createGroup = async (req, res) => {
@@ -134,6 +136,26 @@ const createMeetup = async (req, res) => {
     }
 
     const meetupId = await GroupsModel.createMeetup(groupId, creatorId, date, time, location);
+    const resultGroupName = await GroupsModel.getGroupNameById(groupId);
+    const groupName = resultGroupName.name;
+
+    const resultUserName = await UserModel.getUserData(creatorId);
+    const userName = resultUserName.username;
+
+    const formattedDate = formatDateInCatalan(date);
+
+    const body = location
+    ? `${userName} ha creat una quedada el ${formattedDate} a ${location}. Apunta-t'hi!`
+    : `${userName} ha creat una quedada el ${formattedDate}. Apunta-t'hi!`;
+
+    // Notifiquem a la resta del grup (no bloquegem la resposta si falla)
+    NotificationService.notifyGroupMembers(
+      groupId,
+      creatorId,
+      `${groupName}: Nova quedada! 🍻`,
+      body
+    ).catch(err => console.error('Error enviant notificacions:', err));
+
     return res.status(201).json({ message: 'Quedada creada correctament', meetupId });
   } catch (error) {
     console.error('Error al crear la quedada:', error);
@@ -258,6 +280,16 @@ const updateMemberRole = async (req, res) => {
     return res.status(500).json({ message: 'Error al actualitzar el rol' });
   }
 };
+
+function formatDateInCatalan(dateInput) {
+  const dateObj = new Date(dateInput);
+
+  const weekday = new Intl.DateTimeFormat('ca-ES', { weekday: 'long' }).format(dateObj);
+  const day = dateObj.getDate();
+  const month = new Intl.DateTimeFormat('ca-ES', { month: 'long' }).format(dateObj);
+
+  return `${weekday} ${day} de ${month}`;
+}
 
 export default {
   createGroup,

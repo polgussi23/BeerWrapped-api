@@ -137,3 +137,5 @@ images/*
 # Fotos de perfil
 images/profiles/*
 !images/profiles/.gitkeep
+
+src/config/firebase-service-account.json

@@ -31,7 +31,17 @@ const joinGroup = async (req, res) => {
       return res.status(400).json({ message: 'Cal proporcionar un codi de grup' });
     }
 
+    const user = await UserModel.getUserData(id);
     const groupId = await GroupsModel.joinGroup(id, code);
+    const group = await GroupsModel.getGroupNameById(groupId);
+
+    NotificationService.notifyGroupMembers(
+      groupId,
+      id,
+      `Hi ha un nou membre al grup! 🍻`,
+      `${user.username} acaba d'unir-se al grup ${group.name}`,
+      'group_chat'
+    ).catch(err => console.error('Error enviant notificacions:', err));
     return res.status(200).json({ message: 'T\'has unit al grup correctament', groupId });
   } catch (error) {
     if (error.message === 'Grup no trobat') {
@@ -153,7 +163,8 @@ const createMeetup = async (req, res) => {
       groupId,
       creatorId,
       `${groupName}: Nova quedada! 🍻`,
-      body
+      body,
+      'meetup'
     ).catch(err => console.error('Error enviant notificacions:', err));
 
     return res.status(201).json({ message: 'Quedada creada correctament', meetupId });

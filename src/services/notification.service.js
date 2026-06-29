@@ -1,7 +1,7 @@
 import { messaging } from '../config/firebase.js';
 import NotificationsModel from '../models/notification.model.js';
 
-const notifyGroupMembers = async (groupId, excludeUserId, title, body) => {
+const notifyGroupMembers = async (groupId, excludeUserId, title, body, type) => {
   const tokens = await NotificationsModel.getGroupMemberTokens(groupId, excludeUserId);
 
   if (tokens.length === 0) return;
@@ -10,7 +10,7 @@ const notifyGroupMembers = async (groupId, excludeUserId, title, body) => {
     tokens,
     notification: { title, body },
     data: {
-        type: 'meetup',
+        type: type,
         groupId: String(groupId),
     },
   });

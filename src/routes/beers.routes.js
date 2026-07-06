@@ -5,7 +5,8 @@ import { authenticateToken, authorizeSelf } from '../middlewares/auth.middleware
 const router = express.Router();
 
 router.get('/', authenticateToken, beersController.getAllBeers);
-router.get('/:id/last-3-days', authenticateToken, authorizeSelf, beersController.getLast3DaysUserBeers);
+router.get('/:id/last-3-days', authenticateToken, authorizeSelf, beersController.getUserBeersHistory); // To be removed
+router.get('/:id/user-beers-history', authenticateToken, authorizeSelf, beersController.getUserBeersHistory);
 router.post('/:id/delete-beer', authenticateToken, authorizeSelf, beersController.deleteUserBeer)
 //router.post('/:id/custom', authenticateToken, authorizeSelf, beersController.postCustomUserBeer);
 router.post('/:id/add-beer', authenticateToken, authorizeSelf, beersController.addBeerToUser);

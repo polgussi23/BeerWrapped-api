@@ -5,6 +5,7 @@ import beersRoutes from './routes/beers.routes.js';
 import groupsRoutes from './routes/groups.routes.js';
 import webRoutes from './routes/web.routes.js';
 import versionRoutes from './routes/version.routes.js';
+import notificacionRoutes from './routes/notification.routes.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -24,6 +25,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/beers', beersRoutes);
 app.use('/api/groups', groupsRoutes);
 app.use('/api/check-version', versionRoutes);
+app.use('/api/notification/', notificacionRoutes);
 app.use('/join', webRoutes)
 
 app.get('/', (req, res) => {

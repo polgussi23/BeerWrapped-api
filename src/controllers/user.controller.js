@@ -3,6 +3,19 @@ import bcrypt from 'bcrypt';
 import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
+import { env } from 'process';
+import nodemailer from 'nodemailer';
+
+const transporter = nodemailer.createTransport({
+  host: 'mail.polgussi.cat',   // o smtp.polgussi.cat — depèn del proveïdor
+  port: 587,                    // 465 (SSL) o 587 (TLS)
+  secure: false,                 // true per 465, false per 587
+  requireTLS: true,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
+  }
+});
 
 // GET /api/users/:id/start-day
 const getStartDay = async (req, res) => {
@@ -216,6 +229,31 @@ const updateProfileImage = (req, res) => {
   });
 };
 
+// POST /api/users/:id/idea
+const sendNewIdea = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { assumpte, body } = req.body;
+    const userData = await UserModel.getUserData(id);
+    const username = userData.username;
+    await transporter.sendMail({
+      from: '"BirraWrapped" <noreply@polgussi.cat>',
+      to: process.env.EMAIL_USER,
+      subject: 'New BirraWrapped idea',
+      html: `
+        <p>Enviat per: ${username}</p>
+        <h2>${assumpte}</h2>
+        <p>${body}</p>
+      `
+    });
+    return res.status(200).json({message: "Idea enviada correctament!"});
+  } catch (error) {
+    console.error('Error en enviar la idea', error);
+    return res.status(500).json({ message: 'Error en enviar la idea' });
+  }
+  
+};
+
 // GET /api/users/:id/wrapped-status
 const getWrappedStatus = async (req, res) => {
   try {
@@ -309,6 +347,7 @@ export default {
   updateEmail,
   updatePassword,
   updateProfileImage,
+  sendNewIdea,
   getWrappedStatus,
   updateWrappedSeen,
   getWrappedData,

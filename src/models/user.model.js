@@ -305,6 +305,113 @@ const UserModel = {
       LIMIT 1
     `, [userId, startDate, endDate]);
 
+    // 11. Evolució semestral
+    const midDate = new Date(startDate);
+    midDate.setMonth(midDate.getMonth() + 6);
+    const midDateStr = midDate.toISOString().split('T')[0];
+
+    const [[firstHalf]] = await db.query(`
+      SELECT COUNT(*) as count
+      FROM users_beers
+      WHERE user_id = ? AND date BETWEEN ? AND ?
+    `, [userId, startDate, midDateStr]);
+
+    const [[secondHalf]] = await db.query(`
+      SELECT COUNT(*) as count
+      FROM users_beers
+      WHERE user_id = ? AND date BETWEEN ? AND ?
+    `, [userId, midDateStr, endDate]);
+
+    // 12. Birres per estació
+    const [beersBySeason] = await db.query(`
+      SELECT
+        CASE
+          WHEN MONTH(date) IN (3,4,5)  THEN 'Primavera'
+          WHEN MONTH(date) IN (6,7,8)  THEN 'Estiu'
+          WHEN MONTH(date) IN (9,10,11) THEN 'Tardor'
+          ELSE 'Hivern'
+        END as season,
+        COUNT(*) as count
+      FROM users_beers
+      WHERE user_id = ? AND date BETWEEN ? AND ?
+      GROUP BY season
+      ORDER BY count DESC
+    `, [userId, startDate, endDate]);
+
+    // 13. Dia amb més birres
+    const [[peakDay]] = await db.query(`
+      SELECT DATE_FORMAT(date, '%Y-%m-%d') as date, COUNT(*) as count
+      FROM users_beers
+      WHERE user_id = ? AND date BETWEEN ? AND ?
+      GROUP BY date
+      ORDER BY count DESC
+      LIMIT 1
+    `, [userId, startDate, endDate]);
+
+    // 14. Birra més matinera i més tardana
+    const [[earliestBeer]] = await db.query(`
+      SELECT TIME_FORMAT(MIN(time), '%H:%i') as time
+      FROM users_beers
+      WHERE user_id = ? AND date BETWEEN ? AND ?
+    `, [userId, startDate, endDate]);
+
+    const [[latestBeer]] = await db.query(`
+      SELECT TIME_FORMAT(MAX(time), '%H:%i') as time
+      FROM users_beers
+      WHERE user_id = ? AND date BETWEEN ? AND ?
+    `, [userId, startDate, endDate]);
+
+    // 15. Setmana més intensa
+    const [[bestWeek]] = await db.query(`
+      SELECT 
+        YEARWEEK(date, 1) as week,
+        COUNT(*) as count,
+        DATE_FORMAT(MIN(date), '%Y-%m-%d') as weekStart
+      FROM users_beers
+      WHERE user_id = ? AND date BETWEEN ? AND ?
+      GROUP BY YEARWEEK(date, 1)
+      ORDER BY count DESC
+      LIMIT 1
+    `, [userId, startDate, endDate]);
+
+    // 16. Highlights narratius (frases generades al backend)
+    const highlights = [];
+
+    if (favBeer) {
+      const pct = parseFloat(((favBeer.count / totals.totalBeers) * 100).toFixed(0));
+      if (pct >= 50) {
+        highlights.push(`Clarament lleial: el ${pct}% de les teves birres han estat ${favBeer.name}.`);
+      } else {
+        highlights.push(`La teva birra de capçalera? ${favBeer.name}. ${favBeer.count} vegades no menteix.`);
+      }
+    }
+
+    if (bestDayOfWeek) {
+      const dayNames = {
+        'Dilluns': 'dilluns', 'Dimarts': 'dimarts', 'Dimecres': 'dimecres',
+        'Dijous': 'dijous', 'Divendres': 'divendres', 'Dissabte': 'dissabte', 'Diumenge': 'diumenge'
+      };
+      const dayCA = dayNames[bestDayOfWeek.day_of_week] ?? bestDayOfWeek.day_of_week;
+      highlights.push(`Els teus ${dayCA}s han estat... productius. ${bestDayOfWeek.count} birres en un sol dia de la setmana.`);
+    }
+
+    if (maxStreak >= 3) {
+      highlights.push(`Ratxa de ${maxStreak} dies consecutius. Respecte.`);
+    } else if (maxStreak > 0) {
+      highlights.push(`La teva millor ratxa: ${maxStreak} dia${maxStreak > 1 ? 's' : ''} seguits. Sempre es pot millorar.`);
+    }
+
+    if (beersBySeason.length > 0) {
+      const topSeason = beersBySeason[0];
+      highlights.push(`El teu millor estació? ${topSeason.season}, amb ${topSeason.count} birres. S'entén.`);
+    }
+
+    const trend = firstHalf.count > secondHalf.count ? 'baixant' : 'pujant';
+    const diff = Math.abs(firstHalf.count - secondHalf.count);
+    if (diff > 0) {
+      highlights.push(`La teva tendència va ${trend}: ${diff} birre${diff > 1 ? 's' : ''} ${trend === 'pujant' ? 'més' : 'menys'} al segon semestre.`);
+    }
+
     return {
       totals: {
         totalBeers: totals.totalBeers,
@@ -338,6 +445,26 @@ const UserModel = {
         name: bestGroup.name,
         count: bestGroup.count,
       } : null,
+
+      // 👇 NOU: faltava sencer
+      records: {
+        earliestBeer: earliestBeer?.time ?? null,
+        latestBeer: latestBeer?.time ?? null,
+        peakDay: peakDay ? { date: peakDay.date, count: peakDay.count } : null,
+        bestWeek: bestWeek ? { weekStart: bestWeek.weekStart, count: bestWeek.count } : null,
+      },
+
+      // 👇 NOU: faltava sencer
+      evolution: {
+        firstHalf: firstHalf.count,
+        secondHalf: secondHalf.count,
+        trend: firstHalf.count > secondHalf.count ? 'down' : 'up',
+        beersBySeason,
+        bestSeason: beersBySeason.length > 0 ? beersBySeason[0] : null,
+      },
+
+      // 👇 NOU: faltava sencer
+      highlights,
     };
   },
 };

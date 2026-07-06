@@ -1,5 +1,7 @@
 // src/controllers/groups.controller.js
 import GroupsModel from '../models/groups.model.js';
+import UserModel from '../models/user.model.js';
+import NotificationService from '../services/notification.service.js';
 
 // POST /api/groups
 const createGroup = async (req, res) => {
@@ -29,7 +31,17 @@ const joinGroup = async (req, res) => {
       return res.status(400).json({ message: 'Cal proporcionar un codi de grup' });
     }
 
+    const user = await UserModel.getUserData(id);
     const groupId = await GroupsModel.joinGroup(id, code);
+    const group = await GroupsModel.getGroupNameById(groupId);
+
+    NotificationService.notifyGroupMembers(
+      groupId,
+      id,
+      `Hi ha un nou membre al grup! 🍻`,
+      `${user.username} acaba d'unir-se al grup ${group.name}`,
+      'group_chat'
+    ).catch(err => console.error('Error enviant notificacions:', err));
     return res.status(200).json({ message: 'T\'has unit al grup correctament', groupId });
   } catch (error) {
     if (error.message === 'Grup no trobat') {
@@ -42,6 +54,29 @@ const joinGroup = async (req, res) => {
     return res.status(500).json({ message: 'Error al unir-se al grup' });
   }
 };
+
+const getGroupUserInfo = async (req, res) => {
+  try {
+    const { groupId, id} = req.params;
+    const userInfo = await GroupsModel.getGroupUserInfo(groupId, id);
+    return res.status(200).json({userInfo});
+  } catch (error) {
+    console.error("Error al obtenir info de l'usuari en el grup:", error);
+    return res.status(500).json({ message: "Error al obtenir info de l'usuari en el grup" });
+  }
+}
+
+const updateGroupUserPrivacy = async (req, res) => {
+  try {
+    const { groupId, id} = req.params;
+    const { privacy } = req.body;
+    await GroupsModel.updateGroupUserPrivacy(groupId, id, privacy);
+    return res.status(200).json({ message: 'Privactitat actualitzada correctament' });
+  } catch (error) {
+    console.error("Error a l'actualitzar la privacitat de l'usuari: ", error);
+    return res.status(500).json({ message: "Error a l'actualitzar la privacitat de l'usuari" });
+  }
+}
 
 // GET /api/groups/:id
 const getAllUserGroups = async (req, res) => {
@@ -111,6 +146,27 @@ const createMeetup = async (req, res) => {
     }
 
     const meetupId = await GroupsModel.createMeetup(groupId, creatorId, date, time, location);
+    const resultGroupName = await GroupsModel.getGroupNameById(groupId);
+    const groupName = resultGroupName.name;
+
+    const resultUserName = await UserModel.getUserData(creatorId);
+    const userName = resultUserName.username;
+
+    const formattedDate = formatDateInCatalan(date);
+
+    const body = location
+    ? `${userName} ha creat una quedada el ${formattedDate} a ${location}. Apunta-t'hi!`
+    : `${userName} ha creat una quedada el ${formattedDate}. Apunta-t'hi!`;
+
+    // Notifiquem a la resta del grup (no bloquegem la resposta si falla)
+    NotificationService.notifyGroupMembers(
+      groupId,
+      creatorId,
+      `${groupName}: Nova quedada! 🍻`,
+      body,
+      'meetup'
+    ).catch(err => console.error('Error enviant notificacions:', err));
+
     return res.status(201).json({ message: 'Quedada creada correctament', meetupId });
   } catch (error) {
     console.error('Error al crear la quedada:', error);
@@ -236,10 +292,22 @@ const updateMemberRole = async (req, res) => {
   }
 };
 
+function formatDateInCatalan(dateInput) {
+  const dateObj = new Date(dateInput);
+
+  const weekday = new Intl.DateTimeFormat('ca-ES', { weekday: 'long' }).format(dateObj);
+  const day = dateObj.getDate();
+  const month = new Intl.DateTimeFormat('ca-ES', { month: 'long' }).format(dateObj);
+
+  return `${weekday} ${day} de ${month}`;
+}
+
 export default {
   createGroup,
   joinGroup,
   getAllUserGroups,
+  getGroupUserInfo,
+  updateGroupUserPrivacy,
   getGroupBeersHistory,
   getMeetupAttendees,
   createMeetup,

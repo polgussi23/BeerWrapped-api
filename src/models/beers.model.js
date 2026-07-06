@@ -7,7 +7,7 @@ const BeersModel = {
         return rows;
     },
 
-    getLast3DaysUserBeers: async(userId, date) => {
+    getUserBeersHistory: async(userId, date) => {
         const [rows] = await db.query(
             'SELECT ub.id, b.name, DATE_FORMAT(ub.date, "%Y-%m-%d") as date, ub.time, ub.day_of_week FROM users_beers as ub ' +
             'JOIN beers as b ON ub.beer_id=b.id ' +
@@ -31,7 +31,16 @@ const BeersModel = {
             [userId, beerId]
         );
         return;
-    }
+    },
+
+    updateBeerDateTime: async(userBeerId, date, time, dayOfWeek) => {
+        await db.query(
+            'UPDATE users_beers ' +
+            'SET date=?, time=?, day_of_week=? ' +
+            'WHERE id=?',
+            [date, time,dayOfWeek, userBeerId]
+        );
+    },
 };
 
 export default BeersModel;

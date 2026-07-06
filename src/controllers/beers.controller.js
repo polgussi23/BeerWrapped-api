@@ -20,11 +20,11 @@ const getAllBeers = async (req, res) => {
 };
 
 // GET /api/beers/:id/last-3-days
-const getLast3DaysUserBeers = async (req, res) => {
+const getUserBeersHistory = async (req, res) => {
   try {
     const {id} = req.params;
     const {date} = req.query;
-    const last3DaysUserBeers = await BeersModel.getLast3DaysUserBeers(id, date);
+    const last3DaysUserBeers = await BeersModel.getUserBeersHistory(id, date);
     
     return res.status(200).json({userBeers: last3DaysUserBeers});
   } catch (error) {
@@ -74,11 +74,25 @@ const addBeerToUser = async (req, res) => {
   }
 };
 
+const updateBeerDateTime = async (req, res) => {
+  try {
+    const {id, userBeerId} = req.params;
+    const {date, time, dayOfWeek} = req.body;
+    
+    await BeersModel.updateBeerDateTime(userBeerId, date, time, dayOfWeek);
+    return res.status(200).json({message: 'Beer actualitzadda correctament'});
+  } catch (error) {
+    console.error('Error al actualitzar beer:', error);
+    return res.status(500).json({ message: 'Error al actualitzar beer' });
+  }
+}
+
 
 export default {
   getAllBeers,
-  getLast3DaysUserBeers,
+  getUserBeersHistory,
   deleteUserBeer,
   postCustomUserBeer,
   addBeerToUser,
+  updateBeerDateTime,
 };
